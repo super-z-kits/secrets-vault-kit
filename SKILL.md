@@ -7,10 +7,10 @@
 ## Handover (what the user pastes)
 
 ```
-Doppler PT: dp.pt.xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-project: example-project
-config: dev
-<task description>
+(Doppler)
+- PT: dp.pt.xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+- project: example-project
+- config: dev | stg | prd
 ```
 
 First-time setup (if no Doppler project yet) — create project + 3 configs (dev/stg/prd), write the secrets, return the handover block above for the user to save.
