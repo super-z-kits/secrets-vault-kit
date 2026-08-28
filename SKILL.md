@@ -83,13 +83,20 @@ First-time setup (if no Doppler project yet) — create project + 3 configs (dev
    ```
    Single-secret one-shots still use the pipe-through pattern (fact #5) — no need to stage. The other agent's `scripts/doppler_fetch.py` automates this staging pattern.
 
-5. **The bash tool redactor is PREFIX-SELECTIVE, not comprehensive (OF-1 critical fix).** Observed 2026-08-28: only `ghp_*` is masked (`[REDACTED:github_token]`); `dp.pt.*`, `dp.st.*`, `cfat_*`, and `sbp_*` print in CLEARTEXT in all output (echo, printf, inline in sentences). This may change with platform builds — don't assume. **Verify the current redaction set at session start** with fake tokens (zero risk):
+5. **The bash tool redactor is PREFIX-SELECTIVE, not comprehensive (OF-1 critical fix).** Observed 2026-08-28: only `ghp_*` is masked (`[REDACTED:github_token]`); `dp.pt.*`, `dp.st.*`, `cfat_*`, and `sbp_*` print in CLEARTEXT in all output (echo, printf, inline in sentences). This may change with platform builds — don't assume. **Verify the current redaction set at session start** with fake tokens (zero risk). Use realistic-length fakes (R10 fix: too-short fakes like `ghp_aaaa` don't trigger the redactor and produce false negatives):
    ```bash
-   # Redactor self-test (5 fake tokens, zero risk)
-   for t in ghp_aaaa dp.pt.aaaa dp.st.aaaa cfat_aaaa sbp_aaaa; do
-     printf '%-12s → ' "$t"; echo "$t"
+   # Redactor self-test (5 fake tokens at realistic lengths, zero risk)
+   # Lengths: ghp_=40, dp.pt/dp.st=~49, cfat_=53, sbp_=44
+   for t in \
+     "ghp_$(printf 'a%.0s' {1..35})" \
+     "dp.pt.$(printf 'a%.0s' {1..42})" \
+     "dp.st.$(printf 'a%.0s' {1..42})" \
+     "cfat_$(printf 'a%.0s' {1..47})" \
+     "sbp_$(printf 'a%.0s' {1..39})"; do
+     printf '  %-55s -> ' "$t"; echo "$t"
    done
-   # If any line shows the token instead of [REDACTED:...], that prefix is NOT redacted.
+   # If a line shows the token instead of [REDACTED:...], that prefix is NOT redacted.
+   # Observed: only ghp_* -> [REDACTED:github_token]; others print cleartext.
    ```
    Given the redactor is unreliable: **never `cat`/`head`/`echo` a real secret value**. Capture to a shell var and pipe straight to the next call: `GH_PAT=$(curl ... | jq -r '.secrets.GH_PAT.computed')` then `curl -H "Authorization: Bearer $GH_PAT" ...`. Verify by length only: `echo "${#GH_PAT}"` (length is safe; the value is not).
 
