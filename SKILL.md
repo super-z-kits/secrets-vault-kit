@@ -22,7 +22,10 @@
 
 First-time setup (if no Doppler project yet) — create project + 3 configs (dev/stg/prd), write the seeds into the config you'll reference in the handover, return the handover block above for the user to save.
 
-**Config naming (audit F9):** the standard Doppler convention is `dev | stg | prd`. Some kits add `dev_personal` (a per-user sandbox inside a shared project so multiple users can test without clobbering each other's seeds). If your project uses `dev_personal`, document its purpose; otherwise delete it to avoid confusing agents.
+**Config naming (audit F9, OF-11):** the standard Doppler convention is `dev | stg | prd`. Some kits add `dev_personal` — a per-user sandbox inside a shared project so multiple users can test without clobbering each other's seeds. If your project has `dev_personal`:
+- If it's intentionally a per-user sandbox (mirrors `dev`'s seeds for testing): document its purpose in the Doppler project description so agents know it's expected.
+- If it's a leftover with no clear owner: delete it via the Doppler dashboard to avoid confusing agents who encounter an undocumented config.
+- Agents: if you encounter `dev_personal` and it's not documented, flag it to the user — don't assume it's safe to use as your config.
 
 ## The 5 facts that aren't in training data
 
