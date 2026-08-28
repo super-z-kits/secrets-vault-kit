@@ -1,4 +1,4 @@
-# SKILL-DEPLOY.md — deployment-specific practices
+# DEPLOY.md — deployment-specific practices
 
 > Load this file ONLY when the task involves deploying to a persistent target (GitHub Actions, Cloudflare Workers, Supabase, Vercel/Netlify) and wiring secrets into it. For everything else, `SKILL.md` is enough.
 
