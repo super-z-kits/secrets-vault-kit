@@ -4,8 +4,8 @@
 
 ## Two files, lazy-loaded
 
-- **`SKILL.md`** (45 lines) — always loaded when the user pastes a `dp.*` token. 5 facts + situational specifics + "When you need DEPLOY.md" gating.
-- **`DEPLOY.md`** (151 lines) — lazy-read this only when the task involves persistent deployment targets (GH Actions, CF Workers, Supabase, Vercel/Netlify). Mint a `dp.st.*` Service Token for the deployment target + per-platform deploy patterns + rotation playbook.
+- **`SKILL.md`** (45 lines) — always loaded when the user pastes a `dp.*` token. 5 facts + situational specifics + "When you need SKILL-DEPLOY.md" gating.
+- **`SKILL-DEPLOY.md`** (151 lines) — lazy-read this only when the task involves persistent deployment targets (GH Actions, CF Workers, Supabase, Vercel/Netlify). Mint a `dp.st.*` Service Token for the deployment target + per-platform deploy patterns + rotation playbook.
 
 ## Seed credential (example of what the user pastes)
 
