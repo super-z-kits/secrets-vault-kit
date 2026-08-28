@@ -1,6 +1,6 @@
-# secrets-vault
+# secrets-vault-skill
 
-> Load at session start if the user pastes a `dp.*` token. Otherwise ignore.
+> Read this at session start if the user pastes a `dp.*` token. Otherwise ignore.
 >
 > **Pair with `z-container-kit`** (https://github.com/super-z-kits/z-container-kit) — load both at session start. z-container governs persistence (git IS the disk here — `.env` is committed by design, see z-container law 9); this kit governs the Doppler vault. The two compose: the Doppler PT lives in the committed `.env`; secrets you fetch FROM Doppler for runtime use are not committed (they live in Doppler, your repo only references them by name).
 
