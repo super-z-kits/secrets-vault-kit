@@ -88,11 +88,11 @@ First-time setup (if no Doppler project yet) — create project + 3 configs (dev
    # Redactor self-test (5 fake tokens at realistic lengths, zero risk)
    # Lengths: ghp_=40, dp.pt/dp.st=~49, cfat_=53, sbp_=44
    for t in \
-     "ghp_$(printf 'a%.0s' {1..35})" \
-     "dp.pt.$(printf 'a%.0s' {1..42})" \
-     "dp.st.$(printf 'a%.0s' {1..42})" \
-     "cfat_$(printf 'a%.0s' {1..47})" \
-     "sbp_$(printf 'a%.0s' {1..39})"; do
+     "ghp_$(printf 'a%.0s' {1..36})" \
+     "dp.pt.$(printf 'a%.0s' {1..43})" \
+     "dp.st.$(printf 'a%.0s' {1..43})" \
+     "cfat_$(printf 'a%.0s' {1..48})" \
+     "sbp_$(printf 'a%.0s' {1..40})"; do
      printf '  %-55s -> ' "$t"; echo "$t"
    done
    # If a line shows the token instead of [REDACTED:...], that prefix is NOT redacted.
