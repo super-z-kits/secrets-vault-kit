@@ -80,7 +80,15 @@ First-time setup (if no Doppler project yet) — create project + 3 configs (dev
    ```
    Single-secret one-shots still use the pipe-through pattern (fact #5) — no need to stage. The other agent's `scripts/doppler_fetch.py` automates this staging pattern.
 
-5. **Super Z bash tool redacts known token prefixes (`ghp_*`, `dp.*`, `cfat_*`, `sbp_*`) in display output** — the response contains the real value, you just can't SEE it. Don't waste calls chasing "Doppler is restricting the secret." Capture to a shell var and pipe straight to the next call: `GH_PAT=$(curl -s -H "Authorization: Bearer $PT" "https://api.doppler.com/v3/configs/config/secrets?project=$P&config=$C" | jq -r '.secrets.GH_PAT.computed')` then `curl -H "Authorization: Bearer $GH_PAT" ...`. Verify by length: `echo "${#GH_PAT}"`.
+5. **The bash tool redactor is PREFIX-SELECTIVE, not comprehensive (OF-1 critical fix).** Observed 2026-08-28: only `ghp_*` is masked (`[REDACTED:github_token]`); `dp.pt.*`, `dp.st.*`, `cfat_*`, and `sbp_*` print in CLEARTEXT in all output (echo, printf, inline in sentences). This may change with platform builds — don't assume. **Verify the current redaction set at session start** with fake tokens (zero risk):
+   ```bash
+   # Redactor self-test (5 fake tokens, zero risk)
+   for t in ghp_aaaa dp.pt.aaaa dp.st.aaaa cfat_aaaa sbp_aaaa; do
+     printf '%-12s → ' "$t"; echo "$t"
+   done
+   # If any line shows the token instead of [REDACTED:...], that prefix is NOT redacted.
+   ```
+   Given the redactor is unreliable: **never `cat`/`head`/`echo` a real secret value**. Capture to a shell var and pipe straight to the next call: `GH_PAT=$(curl ... | jq -r '.secrets.GH_PAT.computed')` then `curl -H "Authorization: Bearer $GH_PAT" ...`. Verify by length only: `echo "${#GH_PAT}"` (length is safe; the value is not).
 
 🚨 **Don't revoke the user's Personal Token.** It's their master key — they rotate it themselves via the Doppler dashboard after the session. If you accidentally revoke it (e.g. via `DELETE /v3/workplace/personal_tokens/...`), the user loses access to their vault and you've made a mess.
 
@@ -104,6 +112,34 @@ curl -sS -H "Authorization: Bearer $DOPPLER_PT" \
   "https://api.doppler.com/v3/configs/config/secrets?project=$DOPPLER_PROJECT&config=$DOPPLER_CONFIG" \
   | jq -r '.secrets | to_entries | map(select(.key | startswith("DOPPLER_") | not)) | .[] | "\(.key)  (computed len: \(.value.computed | length // 0))"'
 ```
+
+## Vault-sourced GitHub bootstrap (OF-4 — Path C)
+
+In some sessions, the user does NOT paste a GitHub PAT in the handover — instead, the GH_PAT lives inside the Doppler vault (e.g. `agent-bootstrap` project). This is the expected flow for kit-iteration work. When `zk-remote.url` did NOT survive (true cold start) and no PAT was pasted:
+
+```bash
+# 1. Write the Doppler env file (per fact #4 self-bootstrap)
+# 2. Run zdoppler-smoke to confirm vault is reachable + GH_PAT is present
+bash /home/z/my-project/scripts/zdoppler-smoke
+# 3. Stage the vault secrets (M7 pattern — needed because bash subshells don't persist vars)
+set -a; source /home/user_skills/zk-doppler.env; set +a
+curl -sS -H "Authorization: Bearer $DOPPLER_PT" \
+  "https://api.doppler.com/v3/configs/config/secrets?project=$DOPPLER_PROJECT&config=$DOPPLER_CONFIG" \
+  | jq '.secrets | to_entries | map(select(.key | startswith("DOPPLER_") | not)) | map({(.key): .value.computed}) | add' \
+  > /tmp/my-project/doppler-secrets.json
+chmod 0600 /tmp/my-project/doppler-secrets.json
+# 4. Extract GH_PAT and wire the workspace remote (PAT never echoed — see fact #5)
+GH_PAT=$(jq -r .GH_PAT /tmp/my-project/doppler-secrets.json)
+git -C /home/z/my-project remote add origin "https://${GH_PAT}@github.com/<user>/<repo>.git"
+git -C /home/z/my-project fetch origin
+git -C /home/z/my-project log origin/main --oneline -5   # SANITY CHECK before reset
+git -C /home/z/my-project reset --hard origin/main
+bash /home/user_skills/z-container-kit/scripts/install.sh
+bash /home/z/my-project/scripts/zsave "fresh-chat vault-sourced bootstrap checkpoint"
+rm -f /tmp/my-project/doppler-secrets.json   # cleanup staged secrets
+```
+
+This is the canonical "Path C" — vault-sourced, no user-pasted PAT, no surviving `zk-remote.url`. The Doppler project name `agent-bootstrap` is the hint that this is the intended flow.
 
 ## Per-provider verification recipes (audit F3)
 
@@ -166,4 +202,4 @@ When you encounter an unknown token, identify it by prefix + length:
 | `cfat_` | Cloudflare API Token | 40-100 | `Authorization: Bearer <token>` | per-token scope; verify via `GET /accounts` (not `/user/tokens/verify` — see audit F3) |
 | `sbp_` | Supabase Access Token | ~44 | `Authorization: Bearer <token>` | from supabase.com/dashboard/account/tokens; works on `/v1/projects`, `/v1/organizations` (send custom UA — see audit M3) |
 
-All lengths are observed 2026-08; individual tokens may vary by a few chars. The bash display redactor masks all of these prefixes (fact #5) — you can pipe values through curl/jq without seeing them.
+All lengths are observed 2026-08; individual tokens may vary by a few chars. **The bash display redactor is PREFIX-SELECTIVE (see fact #5)**: only `ghp_*` is masked (`[REDACTED:github_token]`); `dp.*`/`cfat_*`/`sbp_*` print in cleartext. Never pipe a real token through echo/cat/printf — capture to a shell var and pipe directly to the next curl. Verify by length, not by sight.
