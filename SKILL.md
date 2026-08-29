@@ -54,7 +54,7 @@ First-time setup (if no Doppler project yet) — create project + 3 configs (dev
    EOF
    chmod 0600 /home/user_skills/${ZK_PREFIX}-doppler.env
    ```
-   (The bash tool redacts `dp.*` / `ghp_*` / `cfat_*` / `sbp_*` prefixes in display output — fact #5 — so the value won't appear in the transcript.)
+   (The bash tool redactor is PREFIX-SELECTIVE — see fact #5 for the current set. Do NOT assume your token is redacted; verify with the self-test. Never echo real token values.)
 
    **PT staleness metadata (audit m9):** since the kit policy is "user rotates the PT after every chat," the stored PT is always stale-by-policy. Without a timestamp, the agent has no way to know how stale. The canonical file format includes `DOPPLER_PT_STORED_AT=<iso8601>` (UTC, set when the file is written). **Fresh paste wins**: if the user pastes a new PT in a later chat, overwrite the file (and update the timestamp). `zdoppler-smoke` warns if the stored PT is older than 7 days.
 
