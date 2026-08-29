@@ -57,7 +57,7 @@ The tension we resolved: an earlier version of this kit followed z-container's "
 
 ## How this differs from `secrets-vault-agent-kit`
 
-The parallel workstream (slightly newer model) ships 6 files + 3 helper scripts. This kit is 2 files (SKILL.md + DEPLOY.md), no scripts. Same conclusion by independent paths.
+The parallel workstream (slightly newer model) ships 6 files + 3 helper scripts. This kit is 2 docs (SKILL.md + SKILL-DEPLOY.md) + 1 script (scripts/zdoppler-smoke, since v2.10). Same conclusion by independent paths.
 
 Where the two kits contradict on technical findings, this kit kept its own verified findings (per user instruction): the per-secret `/secret?name=X` query endpoint (parallel kit tested only the path-style `/secrets/{NAME}` that 404s); the simpler `access:"read"` mint body field; the fact #2 "don't mint reflexively" rule.
 

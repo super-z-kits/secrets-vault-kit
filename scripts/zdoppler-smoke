@@ -13,8 +13,10 @@
 # non-DOPPLER_ key, exits 0 if healthy.
 #
 # Identity (the shared cross-kit convention — same as z-container-kit):
-# DOPPLER_* env vars already set in this shell win; else ZK_PREFIX env;
-# else $PROJ/.agents/config (ZK_PREFIX=<name>). Nothing else — no scanning.
+# ZK_PREFIX env var > $PROJ/.agents/config (ZK_PREFIX=<name>). Nothing else —
+# no scanning. NOTE: the env FILE is always sourced (fact #4) and its values
+# override any DOPPLER_* vars pre-set in the shell — set --project/--config
+# (or --env-file) to override programmatically.
 #
 # Usage:
 #   zdoppler-smoke                    # uses /home/user_skills/${PREFIX}-doppler.env
@@ -37,7 +39,8 @@ if [ -z "$PREFIX" ] && [ -f "$PROJ/.agents/config" ]; then
 fi
 if [ -z "$PREFIX" ]; then
   echo "zdoppler-smoke: no ZK_PREFIX (env or $PROJ/.agents/config) — cannot locate the doppler env file." >&2
-  echo "  fix: bash /home/user_skills/z-container-kit/scripts/zk-init <name>   # writes the config" >&2
+  echo "  fix: write the config yourself (the shared cross-kit convention):" >&2
+  echo "        mkdir -p $PROJ/.agents && printf 'ZK_PREFIX=<name>\n' > $PROJ/.agents/config" >&2
   echo "  or:   ZK_PREFIX=<name> bash $0        # one-off override" >&2
   echo "  or:   $0 --env-file /home/user_skills/<name>-doppler.env" >&2
   exit 1
@@ -119,7 +122,10 @@ if printf '%s' "$DOPPLER_PT" | grep -qE '^dp\.(pt|st)\.[A-Za-z0-9]{32,80}$'; the
   echo "  PT format:  ✅ valid (dp.(pt|st).<body>, ${PT_LEN} chars total)"
 else
   echo "  PT format:  ❌ INVALID — expected dp.(pt|st).<alphanumeric body>, got length ${PT_LEN}"
-  echo "              first 6 chars: '${DOPPLER_PT:0:6}' (must be 'dp.pt.' or 'dp.st.')"
+  case "$DOPPLER_PT" in
+    dp.pt.*|dp.st.*) : ;;
+    *) echo "              (prefix is neither dp.pt. nor dp.st. — wrong token type or a non-Doppler secret; never echo it)" ;;
+  esac
   echo "              common causes: paste artifact (trailing char), wrong token type, copy/paste from a non-Doppler source"
   exit 1
 fi
