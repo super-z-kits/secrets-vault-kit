@@ -53,7 +53,7 @@ The tension we resolved: an earlier version of this kit followed z-container's "
 - **Rounds 12-13**: re-exports synced from the work repo (realistic-length redactor self-test fakes, fake token lengths).
 - **v2.7.2 / v2.7.3**: fresh sub-agent review rounds 1-2, all fixes applied.
 - **fix #3**: fact #4 no longer contradicts fact #5.
-- **v2.7.4 (current)**: local-first sources — read the local `/home/user_skills/` copies of both kits before any raw.githubusercontent.com fetch (owner feedback); "rare ops" retitled to "special-case operations" (trigger-based framing).
+- **v2.7.4**: local-first sources — read the local `/home/user_skills/` copies of both kits before any raw.githubusercontent.com fetch (owner feedback); "rare ops" retitled to "special-case operations" (trigger-based framing).
 
 ## How this differs from `secrets-vault-agent-kit`
 
@@ -64,6 +64,26 @@ Where the two kits contradict on technical findings, this kit kept its own verif
 ## License
 
 MIT. Use freely.
+
+## v2.9.0: multi-track-safe PT storage (atomic + fresher-wins)
+
+z-container-kit v5 established the static rule: `/home/user_skills` is
+shared across all concurrent chats, has no git (no merge/rebase/conflict
+handling), and is read-only for sessions except sanctioned zero-collision
+credential placements. This kit's `${ZK_PREFIX}-doppler.env` is one of
+them, and v2.9 makes the fact #4 write recipe comply:
+
+- **atomic** — same-dir tmp + `mv` (a parallel session reading the file sees
+  old-or-new, never partial bytes); the old bare `cat >` redirect is gone;
+- **fresher-wins** — a paste only overwrites when the stored
+  `DOPPLER_PT_STORED_AT` is not newer; a stale PT from an older chat can
+  never clobber a fresh rotation a parallel session already wrote;
+- the pairing header now states the static rule and where this file sits in
+  it.
+
+Seeds policy (closing UF-1, decided): agents never write a `dp.pt.*` seed
+into any Doppler config — the PT arrives via handover, lives only in this
+file, and the user rotates it after the session.
 
 ## v2.8.0: v4-zero-install compose + self-refresh
 

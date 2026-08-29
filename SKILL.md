@@ -5,12 +5,15 @@
 > **Pair with `z-container-kit`** — both kits live side-by-side in
 > `/home/user_skills/` (per-user storage that survives into new chats); load
 > both at session start, reading the LOCAL copies (repo:
-> https://github.com/super-z-kits/z-container-kit). z-container v4 is
-> ZERO-INSTALL: its helpers live once per account at
-> `/home/user_skills/z-container-kit/scripts/` and read the project's
+> https://github.com/super-z-kits/z-container-kit). z-container v5 is
+> ZERO-INSTALL and STATIC: its helpers live once per account at
+> `/home/user_skills/z-container-kit/scripts/`, read the project's
 > identity from `/home/z/my-project/.agents/config` (ZK_PREFIX — the .env
-> pattern). All `zdoppler-smoke` / `zsave` invocations in this kit use that
-> canonical path. Update this kit's installed copy with the copy-then-swap
+> pattern), and never write `/home/user_skills` during sessions except
+> sanctioned zero-collision credential placements — this kit's
+> `${ZK_PREFIX}-doppler.env` is one of them (atomic + fresher-wins, fact #4).
+> All `zdoppler-smoke` / `zsave` invocations in this kit use that canonical
+> path. Update this kit's installed copy with the copy-then-swap
 > refresh in README.md (never rm -rf a live copy — a parallel session may
 > be reading it). z-container governs
 > persistence (git IS the disk here — `.env` is committed by design, see
@@ -64,19 +67,34 @@ First-time setup (if no Doppler project yet) — create project + 3 configs (dev
    DOPPLER_CONFIG=dev
    ```
 
-   **Writing the file (audit F4):** the Super Z `Write` tool can only write under `/home/z/*` — it will refuse `/home/user_skills/...`. Use a bash heredoc instead:
+   **Writing the file (audit F4, v2.9 multi-track safe):** the Super Z `Write`
+   tool can only write under `/home/z/*` — it will refuse `/home/user_skills/...`.
+   Use bash. `/home/user_skills` is shared across ALL concurrent chats and has
+   no git (no merge, no conflict handling — z-container v5's static rule makes
+   it read-only for sessions except sanctioned credential placements like
+   this one), so the write must be (a) atomic — same-dir tmp + `mv`, never a
+   bare redirect — and (b) fresher-wins — an older paste never clobbers a
+   newer stored rotation from a parallel session:
    ```bash
-   cat > /home/user_skills/${ZK_PREFIX}-doppler.env <<'EOF'
+   F=/home/user_skills/${ZK_PREFIX}-doppler.env
+   NEW_TS=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+   OLD_TS=$(sed -n 's/^DOPPLER_PT_STORED_AT=//p' "$F" 2>/dev/null)
+   if [ -n "$OLD_TS" ] && [ "$OLD_TS" \> "$NEW_TS" ]; then
+     echo "keeping existing file (stored $OLD_TS is NEWER — a parallel session already rotated)"
+   else
+     T="$F.tmp.$$"
+     cat > "$T" <<EOF
    DOPPLER_PT=dp.pt.xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
    DOPPLER_PROJECT=example-project
    DOPPLER_CONFIG=dev
-   DOPPLER_PT_STORED_AT=2026-08-28T13:00:00Z
+   DOPPLER_PT_STORED_AT=$NEW_TS
    EOF
-   chmod 0600 /home/user_skills/${ZK_PREFIX}-doppler.env
+     chmod 0600 "$T" && mv -f "$T" "$F"   # atomic swap: readers see old-or-new, never partial
+   fi
    ```
    (The bash tool redactor is PREFIX-SELECTIVE — see fact #5 for the current set. Do NOT assume your token is redacted; verify with the self-test. Never echo real token values.)
 
-   **PT staleness metadata (audit m9):** since the kit policy is "user rotates the PT after every chat," the stored PT is always stale-by-policy. Without a timestamp, the agent has no way to know how stale. The canonical file format includes `DOPPLER_PT_STORED_AT=<iso8601>` (UTC, set when the file is written). **Fresh paste wins**: if the user pastes a new PT in a later chat, overwrite the file (and update the timestamp). `zdoppler-smoke` warns if the stored PT is older than 7 days.
+   **PT staleness metadata (audit m9):** since the kit policy is "user rotates the PT after every chat," the stored PT is always stale-by-policy. Without a timestamp, the agent has no way to know how stale. The canonical file format includes `DOPPLER_PT_STORED_AT=<iso8601>` (UTC, set when the file is written). **Fresher paste wins**: a new paste overwrites the file ONLY when the stored timestamp is not newer — a parallel session's fresher rotation is never clobbered by an older one. `zdoppler-smoke` warns if the stored PT is older than 7 days.
 
    **PT format validation (audit F1):** before the first Doppler API call, sanity-check the PT format:
    ```bash
