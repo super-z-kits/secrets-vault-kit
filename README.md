@@ -46,7 +46,14 @@ The tension we resolved: an earlier version of this kit followed z-container's "
 - R5+: tested "do we even need SKILL.md?" with fresh sub-agent. Without SKILL.md, friction 4/5 (3 of those points were an environment-specific bash tool redaction quirk). With minimal SKILL.md, friction 1/5. Cut SKILL.md 240 → 74 lines.
 - R5++: polished — dropped magic word, simplified handover labels, added bash-redaction as fact #5.
 - R5+++: dropped the mint-default reflex (theater for chat session — PT is already burned, ST doesn't reduce blast radius); reclassified "Beyond the basics" into situational specifics.
-- **R5++++ (this round)**: split into SKILL.md (always loaded) + DEPLOY.md (lazy-loaded for deployment tasks). 3-wave usability test (simple vault → dev scenario → deployment) — friction 1/5, 2/5, 2/5. PT verified intact at the end of each wave (the 🚨 "don't revoke the master PT" rule held). Added z-container-kit pairing note + fixed the .env conflict (fact #4 now says the PT goes in the committed `.env` per z-container law 9; secrets fetched from Doppler for runtime use are not committed).
+- **R5++++**: split into SKILL.md (always loaded) + DEPLOY.md (lazy-loaded for deployment tasks). 3-wave usability test (simple vault → dev scenario → deployment) — friction 1/5, 2/5, 2/5. PT verified intact at the end of each wave (the 🚨 "don't revoke the master PT" rule held). Added z-container-kit pairing note + fixed the .env conflict (fact #4 now says the PT goes in the committed `.env` per z-container law 9; secrets fetched from Doppler for runtime use are not committed).
+- **R6 (supersedes R5++++'s fact #4 change)**: pivoted PT persistence to `/home/user_skills/${ZK_PREFIX}-doppler.env` (mode 0600) — outside the project repo, so git/scanners/reviewers/GitHub push protection can't see it. This REVERSES the R5++++ decision to put the PT in the committed `.env` (that posture conflicted with code review and push protection; see "The tension we resolved" above). Added the cat-leak warning.
+- **v2 (onboarding stress-test)**: 19 audit fixes (F1-F9 + m1/m9/m13/M3/M4/M7), incl. the config-naming convention (dev/stg/prd + `dev_personal` handling) and Path C (vault-sourced GitHub bootstrap).
+- **OF rounds**: OF-1 critical — redactor extended beyond `ghp_*` (dp.pt/dp.st/cfat/sbp patterns); OF-4 Path C; OF-11 `dev_personal` convention expanded.
+- **Rounds 12-13**: re-exports synced from the work repo (realistic-length redactor self-test fakes, fake token lengths).
+- **v2.7.2 / v2.7.3**: fresh sub-agent review rounds 1-2, all fixes applied.
+- **fix #3**: fact #4 no longer contradicts fact #5.
+- **v2.7.4 (current)**: local-first sources — read the local `/home/user_skills/` copies of both kits before any raw.githubusercontent.com fetch (owner feedback); "rare ops" retitled to "special-case operations" (trigger-based framing).
 
 ## How this differs from `secrets-vault-agent-kit`
 
