@@ -48,7 +48,7 @@ The tension we resolved: an earlier version of this kit followed z-container's "
 - R5+++: dropped the mint-default reflex (theater for chat session — PT is already burned, ST doesn't reduce blast radius); reclassified "Beyond the basics" into situational specifics.
 - **R5++++ (this round)**: split into SKILL.md (always loaded) + DEPLOY.md (lazy-loaded for deployment tasks). 3-wave usability test (simple vault → dev scenario → deployment) — friction 1/5, 2/5, 2/5. PT verified intact at the end of each wave (the 🚨 "don't revoke the master PT" rule held). Added z-container-kit pairing note + fixed the .env conflict (fact #4 now says the PT goes in the committed `.env` per z-container law 9; secrets fetched from Doppler for runtime use are not committed).
 
-## How this differs from `zikomolapoutl/secrets-agent-kit`
+## How this differs from `secrets-vault-agent-kit`
 
 The parallel workstream (slightly newer model) ships 6 files + 3 helper scripts. This kit is 2 files (SKILL.md + DEPLOY.md), no scripts. Same conclusion by independent paths.
 
