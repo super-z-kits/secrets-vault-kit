@@ -5,17 +5,19 @@
 > **Pair with `z-container-kit`** — both kits live side-by-side in
 > `/home/user_skills/` (per-user storage that survives into new chats); load
 > both at session start, reading the LOCAL copies (repo:
-> https://github.com/super-z-kits/z-container-kit). z-container v5 is
+> https://github.com/super-z-kits/z-container-kit). z-container v5.1 is
 > ZERO-INSTALL and STATIC: its helpers live once per account at
 > `/home/user_skills/z-container-kit/scripts/`, read the project's
 > identity from `/home/z/my-project/.agents/config` (ZK_PREFIX — the .env
 > pattern), and never write `/home/user_skills` during sessions except
-> sanctioned zero-collision credential placements — this kit's
+> sanctioned zero-collision placements — this kit's
 > `${ZK_PREFIX}-doppler.env` is one of them (atomic + fresher-wins, fact #4).
-> All `zdoppler-smoke` / `zsave` invocations in this kit use that canonical
-> path. Update this kit's installed copy with the copy-then-swap
-> refresh in README.md (never rm -rf a live copy — a parallel session may
-> be reading it). z-container governs
+> THIS kit ships its own tool since v2.10:
+> `bash /home/user_skills/secrets-vault-kit/scripts/zdoppler-smoke` (moved
+> from z-container-kit — Doppler is this kit's domain). It resolves the
+> prefix the same way (ZK_PREFIX env > `.agents/config`). Update this kit's
+> installed copy with the copy-then-swap refresh in README.md (never rm -rf
+> a live copy — a parallel session may be reading it). z-container governs
 > persistence (git IS the disk here — `.env` is committed by design, see
 > z-container law 9); this kit governs the Doppler vault. The two compose:
 > the Doppler PT lives in `/home/user_skills/${ZK_PREFIX}-doppler.env` (NOT
@@ -60,7 +62,7 @@ First-time setup (if no Doppler project yet) — create project + 3 configs (dev
 
 3. **Don't put `dp.pt.*` in persistent deployment targets** (GitHub repo secrets, Cloudflare Worker secrets, Vercel/Netlify env vars) — anyone with `repo` scope on GitHub can read a stored secret, and from a `dp.pt.*` they can mint write-capable Service Tokens. Mint a `dp.st.*` Service Token instead (scoped to one project+config, read-only by default, TTL-bounded via `expire_at` Unix ts which auto-revokes + auto-deletes the slug at expiry). See `SKILL-DEPLOY.md` for the deployment flow.
 
-4. **Store the PT in `/home/user_skills/${ZK_PREFIX}-doppler.env` (mode 0600)** — NOT in the project's `.env` and NOT in a shell var. Reasons: (a) `/home/user_skills/` is OUTSIDE the project repo, so git/trufflehog/gitleaks/GitHub push protection can't see it — code reviewers won't flag it and GitHub won't auto-revoke a `ghp_*` if it leaks there; (b) it survives recycles + force-kills (PolarFS) and probably survives into a new chat (per-user namespace, see z-container persistence map); (c) mode 0600 means other processes on the box can't read it; (d) matches the z-container `${ZK_PREFIX}-remote.url` pattern — same place, same posture. Canonical file contents:
+4. **Store the PT in `/home/user_skills/${ZK_PREFIX}-doppler.env` (mode 0600)** — NOT in the project's `.env` and NOT in a shell var. Reasons: (a) `/home/user_skills/` is OUTSIDE the project repo, so git/trufflehog/gitleaks/GitHub push protection can't see it — code reviewers won't flag it and GitHub won't auto-revoke a `ghp_*` if it leaks there; (b) it survives recycles + force-kills (PolarFS) and probably survives into a new chat (per-user namespace, see z-container persistence map); (c) mode 0600 means other processes on the box can't read it; (d) same posture as z-container's account default (`zk-default.env`, 0600) — a conscious credential placement in per-user storage, never inside the repo. Canonical file contents:
    ```
    DOPPLER_PT=dp.pt.xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
    DOPPLER_PROJECT=example-project
@@ -120,7 +122,7 @@ First-time setup (if no Doppler project yet) — create project + 3 configs (dev
    # at session end:
    rm -f /tmp/my-project/doppler-secrets.json
    ```
-   Single-secret one-shots still use the pipe-through pattern (fact #5) — no need to stage. The other agent's `scripts/doppler_fetch.py` automates this staging pattern.
+   Single-secret one-shots still use the pipe-through pattern (fact #5) — no need to stage. (The old `doppler_fetch.py` automation was deleted in z-container v5.1's script audit — this curl recipe is the canonical staging pattern.)
 
 5. **The bash tool redactor is PREFIX-SELECTIVE, not comprehensive (OF-1 critical fix).** Observed 2026-08-28: only `ghp_*` is masked (`[REDACTED:github_token]`); `dp.pt.*`, `dp.st.*`, `cfat_*`, and `sbp_*` print in CLEARTEXT in all output (echo, printf, inline in sentences). This may change with platform builds — don't assume. **Verify the current redaction set at session start** with fake tokens (zero risk). Use realistic-length fakes (R10 fix: too-short fakes like `ghp_aaaa` don't trigger the redactor and produce false negatives):
    ```bash
@@ -143,13 +145,13 @@ First-time setup (if no Doppler project yet) — create project + 3 configs (dev
 
 ## Smoke test (audit F8)
 
-After writing `/home/user_skills/${ZK_PREFIX}-doppler.env`, run the one-shot smoke test from z-container-kit:
+After writing `/home/user_skills/${ZK_PREFIX}-doppler.env`, run this kit's one-shot smoke test (v2.10: the tool moved here from z-container-kit — Doppler is this kit's domain):
 
 ```
-bash /home/user_skills/z-container-kit/scripts/zdoppler-smoke
+bash /home/user_skills/secrets-vault-kit/scripts/zdoppler-smoke
 ```
 
-It: (a) validates the PT format (audit F1), (b) fetches the secrets, (c) prints `name: computed_len` for each non-DOPPLER_ key, (d) exits 0 if healthy, non-zero if the PT is malformed or the config is empty. Drops the agent's verification step from ~15 lines of boilerplate to a single command. If `zdoppler-smoke` is unavailable (no z-container-kit on the account), the verification boilerplate is:
+It: (a) validates the PT format (audit F1), (b) fetches the secrets, (c) prints `name: computed_len` for each non-DOPPLER_ key, (d) exits 0 if healthy, non-zero if the PT is malformed or the config is empty. Drops the agent's verification step from ~15 lines of boilerplate to a single command. It resolves the prefix exactly like z-container's helpers (ZK_PREFIX env > `$PROJ/.agents/config`) and accepts `--env-file` / `--project` / `--config` overrides. If the script is unavailable (this kit's installed copy predates v2.10), the verification boilerplate is:
 
 ```bash
 set -a; source /home/user_skills/${ZK_PREFIX}-doppler.env; set +a
@@ -164,12 +166,12 @@ curl -sS -H "Authorization: Bearer $DOPPLER_PT" \
 
 ## Vault-sourced GitHub bootstrap (OF-4 — Path C)
 
-In some sessions, the user does NOT paste a GitHub PAT in the handover — instead, the GH_PAT lives inside the Doppler vault (e.g. `agent-bootstrap` project). This is the expected flow for kit-iteration work. When `${ZK_PREFIX}-remote.url` did NOT survive (true cold start) and no PAT was pasted:
+In some sessions, the user does NOT paste a GitHub PAT in the handover — instead, the GH_PAT lives inside the Doppler vault (e.g. `agent-bootstrap` project). This is the expected flow for kit-iteration work. On a true cold start (no origin wired, no account default — note z-container v5.1 deleted the `${ZK_PREFIX}-remote.url` credential files; the remote now travels inside the repo, with `zk-default.env` as the opt-in single-project shortcut) and no PAT was pasted:
 
 ```bash
 # 1. Write the Doppler env file (per fact #4 self-bootstrap)
 # 2. Run zdoppler-smoke to confirm vault is reachable + GH_PAT is present
-bash /home/user_skills/z-container-kit/scripts/zdoppler-smoke
+bash /home/user_skills/secrets-vault-kit/scripts/zdoppler-smoke
 # 3. Stage the vault secrets (M7 pattern — needed because bash subshells don't persist vars)
 set -a; source /home/user_skills/${ZK_PREFIX}-doppler.env; set +a
 curl -sS -H "Authorization: Bearer $DOPPLER_PT" \
@@ -188,7 +190,7 @@ bash /home/user_skills/z-container-kit/scripts/zsave "fresh-chat vault-sourced b
 rm -f /tmp/my-project/doppler-secrets.json   # cleanup staged secrets
 ```
 
-This is the canonical "Path C" — vault-sourced, no user-pasted PAT, no surviving `${ZK_PREFIX}-remote.url`. The Doppler project name `agent-bootstrap` is the hint that this is the intended flow.
+This is the canonical "Path C" — vault-sourced, no user-pasted PAT, no surviving remote. The Doppler project name `agent-bootstrap` is the hint that this is the intended flow.
 
 ## Per-provider verification recipes (audit F3)
 
