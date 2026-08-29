@@ -64,3 +64,25 @@ Where the two kits contradict on technical findings, this kit kept its own verif
 ## License
 
 MIT. Use freely.
+
+## v2.8.0: v4-zero-install compose + self-refresh
+
+z-container-kit v4.0 removed per-project kit copies: helpers run from the
+canonical per-account package (`/home/user_skills/z-container-kit/scripts/`)
+and read project identity from `.agents/config`. This kit's smoke-test /
+bootstrap paths now use those canonical paths. Also: this kit's installed
+copy at `/home/user_skills/secrets-vault-kit/` is refreshed
+copy-then-swap (atomic; a parallel session never sees a half-written kit):
+
+```bash
+SRC=/tmp/my-project/svk-clone   # an updated clone of this repo
+DST=/home/user_skills/secrets-vault-kit
+rm -rf "$DST.incoming" && cp -r "$SRC" "$DST.incoming" \
+  && rm -rf "$DST.incoming/.git" \
+  && rm -rf "$DST" && mv "$DST.incoming" "$DST"
+```
+
+(The `rm -rf "$DST"` before the `mv` is load-bearing: `mv` onto an existing
+directory nests INSIDE it — the exact bug z-container-kit's refresh.sh shipped
+and fixed in 3a13244. Note the platform consumes `/home/user_skills/*.zip` at
+sub-agent spawn; if you keep a zip for delivery, rebuild it after refreshing.)

@@ -5,7 +5,14 @@
 > **Pair with `z-container-kit`** — both kits live side-by-side in
 > `/home/user_skills/` (per-user storage that survives into new chats); load
 > both at session start, reading the LOCAL copies (repo:
-> https://github.com/super-z-kits/z-container-kit). z-container governs
+> https://github.com/super-z-kits/z-container-kit). z-container v4 is
+> ZERO-INSTALL: its helpers live once per account at
+> `/home/user_skills/z-container-kit/scripts/` and read the project's
+> identity from `/home/z/my-project/.agents/config` (ZK_PREFIX — the .env
+> pattern). All `zdoppler-smoke` / `zsave` invocations in this kit use that
+> canonical path. Update this kit's installed copy with the copy-then-swap
+> refresh in README.md (never rm -rf a live copy — a parallel session may
+> be reading it). z-container governs
 > persistence (git IS the disk here — `.env` is committed by design, see
 > z-container law 9); this kit governs the Doppler vault. The two compose:
 > the Doppler PT lives in `/home/user_skills/${ZK_PREFIX}-doppler.env` (NOT
@@ -120,10 +127,10 @@ First-time setup (if no Doppler project yet) — create project + 3 configs (dev
 After writing `/home/user_skills/${ZK_PREFIX}-doppler.env`, run the one-shot smoke test from z-container-kit:
 
 ```
-bash /home/z/my-project/scripts/zdoppler-smoke
+bash /home/user_skills/z-container-kit/scripts/zdoppler-smoke
 ```
 
-It: (a) validates the PT format (audit F1), (b) fetches the secrets, (c) prints `name: computed_len` for each non-DOPPLER_ key, (d) exits 0 if healthy, non-zero if the PT is malformed or the config is empty. Drops the agent's verification step from ~15 lines of boilerplate to a single command. If the kit's `zdoppler-smoke` isn't installed (e.g. older kit copy), the verification boilerplate is:
+It: (a) validates the PT format (audit F1), (b) fetches the secrets, (c) prints `name: computed_len` for each non-DOPPLER_ key, (d) exits 0 if healthy, non-zero if the PT is malformed or the config is empty. Drops the agent's verification step from ~15 lines of boilerplate to a single command. If `zdoppler-smoke` is unavailable (no z-container-kit on the account), the verification boilerplate is:
 
 ```bash
 set -a; source /home/user_skills/${ZK_PREFIX}-doppler.env; set +a
@@ -143,7 +150,7 @@ In some sessions, the user does NOT paste a GitHub PAT in the handover — inste
 ```bash
 # 1. Write the Doppler env file (per fact #4 self-bootstrap)
 # 2. Run zdoppler-smoke to confirm vault is reachable + GH_PAT is present
-bash /home/z/my-project/scripts/zdoppler-smoke
+bash /home/user_skills/z-container-kit/scripts/zdoppler-smoke
 # 3. Stage the vault secrets (M7 pattern — needed because bash subshells don't persist vars)
 set -a; source /home/user_skills/${ZK_PREFIX}-doppler.env; set +a
 curl -sS -H "Authorization: Bearer $DOPPLER_PT" \
@@ -157,8 +164,8 @@ git -C /home/z/my-project remote add origin "https://${GH_PAT}@github.com/<user>
 git -C /home/z/my-project fetch origin
 git -C /home/z/my-project log origin/main --oneline -5   # SANITY CHECK before reset
 git -C /home/z/my-project reset --hard origin/main
-bash /home/user_skills/z-container-kit/scripts/install.sh
-bash /home/z/my-project/scripts/zsave "fresh-chat vault-sourced bootstrap checkpoint"
+bash /home/user_skills/z-container-kit/scripts/zk-init <name>
+bash /home/user_skills/z-container-kit/scripts/zsave "fresh-chat vault-sourced bootstrap checkpoint"
 rm -f /tmp/my-project/doppler-secrets.json   # cleanup staged secrets
 ```
 
