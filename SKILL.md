@@ -2,12 +2,25 @@
 
 > Read this at session start if the user pastes a `dp.*` token. Otherwise ignore.
 >
-> **Pair with `z-container-kit`** (https://github.com/super-z-kits/z-container-kit) — load both at session start. z-container governs persistence (git IS the disk here — `.env` is committed by design, see z-container law 9); this kit governs the Doppler vault. The two compose: the Doppler PT lives in `/home/user_skills/${ZK_PREFIX}-doppler.env` (NOT the committed `.env`); secrets you fetch FROM Doppler for runtime use are not committed (they live in Doppler, your repo only references them by name).
+> **Pair with `z-container-kit`** — both kits live side-by-side in
+> `/home/user_skills/` (per-user storage that survives into new chats); load
+> both at session start, reading the LOCAL copies (repo:
+> https://github.com/super-z-kits/z-container-kit). z-container governs
+> persistence (git IS the disk here — `.env` is committed by design, see
+> z-container law 9); this kit governs the Doppler vault. The two compose:
+> the Doppler PT lives in `/home/user_skills/${ZK_PREFIX}-doppler.env` (NOT
+> the committed `.env`); secrets you fetch FROM Doppler for runtime use are
+> not committed (they live in Doppler, your repo only references them by name).
 >
-> **Canonical URLs (audit m1)** — fetch these directly (no inference from GitHub-title shorthand):
-> - z-container-kit SKILL.md: https://raw.githubusercontent.com/super-z-kits/z-container-kit/main/SKILL.md
-> - secrets-vault-kit SKILL.md: https://raw.githubusercontent.com/super-z-kits/secrets-vault-kit/main/SKILL.md
-> - secrets-vault-kit SKILL-DEPLOY.md: https://raw.githubusercontent.com/super-z-kits/secrets-vault-kit/main/SKILL-DEPLOY.md
+> **Sources — read LOCAL copies first** (audit m1, re-scoped v2.7.4: local
+> before web):
+> - z-container-kit: `/home/user_skills/z-container-kit/SKILL.md`
+> - secrets-vault-kit: `/home/user_skills/secrets-vault-kit/SKILL.md`
+> - deploy guide: `/home/user_skills/secrets-vault-kit/SKILL-DEPLOY.md`
+>
+> Web fallback ONLY if a local copy is absent:
+> `https://raw.githubusercontent.com/super-z-kits/<repo>/main/<file>` —
+> fetch the raw URL directly, no inference from GitHub-title shorthand.
 
 ## Handover (what the user pastes)
 
@@ -161,7 +174,7 @@ When you fetch seed credentials from Doppler (e.g. `GH_PAT`, `CF_ACCOUNT_API_KEY
 
 **Supabase (audit M3 — the WAF trap)**: `api.supabase.com` is fronted by Cloudflare WAF. `python-urllib`'s default UA (`Python-urllib/3.x`) → HTTP 403 with EMPTY body (or `error code: 1010` on some endpoints) — reads exactly like an auth failure. **Always send a custom `User-Agent`** (e.g. `User-Agent: ${ZK_PREFIX}-verify`). With curl this is automatic (curl's default UA passes); with urllib/requests/axios, set it explicitly. Once you have 200: `GET /v1/projects` → 200 + array (possibly empty `[]` = token valid, account has no projects — NOT an error). `GET /v1/organizations` → 200 + array of orgs the token can see.
 
-## Situational specifics (rare ops)
+## Situational specifics (special-case operations)
 
 **Reading one secret by name** (instead of fetching all): `GET /v3/configs/config/secret?name=X` (singular + query param). NOT `/secrets/{NAME}` — that 404s. Value at `.value.computed`.
 
