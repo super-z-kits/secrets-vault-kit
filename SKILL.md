@@ -74,25 +74,26 @@ First-time setup (if no Doppler project yet) — create project + 3 configs (dev
    it read-only for sessions except sanctioned credential placements like
    this one), so the write must be (a) atomic — same-dir tmp + `mv`, never a
    bare redirect — and (b) fresher-wins — an older paste never clobbers a
-   newer stored rotation from a parallel session:
+   newer stored rotation from a parallel session. With the handover values in
+   shell vars (`DOPPLER_PT`, `DOPPLER_PROJECT`, `DOPPLER_CONFIG`):
    ```bash
    F=/home/user_skills/${ZK_PREFIX}-doppler.env
+   : "${DOPPLER_PT:?set DOPPLER_PT from the handover paste}" \
+     "${DOPPLER_PROJECT:?}" "${DOPPLER_CONFIG:?}"   # fail loudly, never write empty values
    NEW_TS=$(date -u +%Y-%m-%dT%H:%M:%SZ)
    OLD_TS=$(sed -n 's/^DOPPLER_PT_STORED_AT=//p' "$F" 2>/dev/null)
    if [ -n "$OLD_TS" ] && [ "$OLD_TS" \> "$NEW_TS" ]; then
      echo "keeping existing file (stored $OLD_TS is NEWER — a parallel session already rotated)"
    else
      T="$F.tmp.$$"
-     cat > "$T" <<EOF
-   DOPPLER_PT=dp.pt.xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-   DOPPLER_PROJECT=example-project
-   DOPPLER_CONFIG=dev
-   DOPPLER_PT_STORED_AT=$NEW_TS
-   EOF
+     printf 'DOPPLER_PT=%s\nDOPPLER_PROJECT=%s\nDOPPLER_CONFIG=%s\nDOPPLER_PT_STORED_AT=%s\n' \
+       "$DOPPLER_PT" "$DOPPLER_PROJECT" "$DOPPLER_CONFIG" "$NEW_TS" > "$T"
      chmod 0600 "$T" && mv -f "$T" "$F"   # atomic swap: readers see old-or-new, never partial
    fi
    ```
-   (The bash tool redactor is PREFIX-SELECTIVE — see fact #5 for the current set. Do NOT assume your token is redacted; verify with the self-test. Never echo real token values.)
+   (No heredoc on purpose — an indented `EOF` terminator breaks a verbatim
+   copy-paste. printf is indent-immune. The bash tool redactor is
+   PREFIX-SELECTIVE — see fact #5; never echo real token values.)
 
    **PT staleness metadata (audit m9):** since the kit policy is "user rotates the PT after every chat," the stored PT is always stale-by-policy. Without a timestamp, the agent has no way to know how stale. The canonical file format includes `DOPPLER_PT_STORED_AT=<iso8601>` (UTC, set when the file is written). **Fresher paste wins**: a new paste overwrites the file ONLY when the stored timestamp is not newer — a parallel session's fresher rotation is never clobbered by an older one. `zdoppler-smoke` warns if the stored PT is older than 7 days.
 

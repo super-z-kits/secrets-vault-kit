@@ -4,8 +4,8 @@
 
 ## Two files, lazy-loaded
 
-- **`SKILL.md`** (45 lines) — always loaded when the user pastes a `dp.*` token. 5 facts + situational specifics + "When you need DEPLOY.md" gating.
-- **`DEPLOY.md`** (151 lines) — lazy-loaded only when the task involves persistent deployment targets (GH Actions, CF Workers, Supabase, Vercel/Netlify). Mint a `dp.st.*` Service Token for the deployment target + per-platform deploy patterns + rotation playbook.
+- **`SKILL.md`** — always loaded when the user pastes a `dp.*` token. 5 facts + situational specifics + "When you need DEPLOY.md" gating.
+- **`SKILL-DEPLOY.md`** — lazy-loaded only when the task involves persistent deployment targets (GH Actions, CF Workers, Supabase, Vercel/Netlify). Mint a `dp.st.*` Service Token for the deployment target + per-platform deploy patterns + rotation playbook.
 
 ## The handover (what the user pastes)
 
@@ -97,12 +97,17 @@ copy-then-swap (atomic; a parallel session never sees a half-written kit):
 ```bash
 SRC=/tmp/my-project/svk-clone   # an updated clone of this repo
 DST=/home/user_skills/secrets-vault-kit
-rm -rf "$DST.incoming" && cp -r "$SRC" "$DST.incoming" \
-  && rm -rf "$DST.incoming/.git" \
-  && rm -rf "$DST" && mv "$DST.incoming" "$DST"
+IN="$DST.incoming.$$"; OLD="$DST.old.$$"
+rm -rf "$IN" && cp -r "$SRC" "$IN" && rm -rf "$IN/.git"
+[ ! -d "$DST" ] || mv -f "$DST" "$OLD"   # first install: nothing to move aside
+mv -f "$IN" "$DST" && rm -rf "$OLD"
 ```
 
-(The `rm -rf "$DST"` before the `mv` is load-bearing: `mv` onto an existing
-directory nests INSIDE it — the exact bug z-container-kit's refresh.sh shipped
-and fixed in 3a13244. Note the platform consumes `/home/user_skills/*.zip` at
-sub-agent spawn; if you keep a zip for delivery, rebuild it after refreshing.)
+(Rename-aside swap — v2.9: the canonical dir is renamed AWAY and the staging
+ tree renamed IN, two atomic renames; a parallel session reading the kit
+ sees the old or the new tree, never a mix, and the live copy is never
+ `rm -rf`'d before its replacement exists — matching what the kit's own
+ SKILL.md preaches. The per-run `$$` staging name means concurrent refreshes
+ can't clobber each other. Note the platform consumes
+ `/home/user_skills/*.zip` at sub-agent spawn; if you keep a zip for delivery,
+ rebuild it after refreshing.)
