@@ -23,7 +23,7 @@ No magic word — the `dp.*` token in the user's paste triggers the skill. The P
 1. Fetch endpoint + `.computed` path + DOPPLER_* auto-inject gotcha
 2. **Use the PT directly for the chat session** — don't mint a Service Token as a "least-privilege" reflex (theater; the PT is already in chat, so the ST doesn't reduce blast radius)
 3. Only mint an ST for persistent deployment targets (privilege-escalation protection) + `expire_at` mechanism
-4. **Store the PT in `/home/user_skills/zk-doppler.env` (mode 0600)** — outside the project repo, so git/trufflehog/gitleaks/GitHub push protection can't see it. Code reviewers won't flag it, GitHub won't auto-revoke. Matches the z-container `zk-remote.url` pattern. Secrets you FETCH from Doppler for runtime use go in shell vars only.
+4. **Store the PT in `/home/user_skills/${ZK_PREFIX}-doppler.env` (mode 0600)** — outside the project repo, so git/trufflehog/gitleaks/GitHub push protection can't see it. Code reviewers won't flag it, GitHub won't auto-revoke. Matches the z-container `${ZK_PREFIX}-remote.url` pattern. Secrets you FETCH from Doppler for runtime use go in shell vars only.
 5. Super Z bash tool redacts known token prefixes in display — capture to shell var, verify by length, pipe to next call (don't chase "Doppler is restricting the secret")
 
 ## Pair with z-container-kit
@@ -32,9 +32,9 @@ No magic word — the `dp.*` token in the user's paste triggers the skill. The P
 
 The two kits compose:
 - **z-container-kit** governs persistence: git IS the disk here, the watchdog resets to main before every toolcall, worktrees live on PolarFS, credential files live in `/home/user_skills/` (mode 0600) — outside the project repo, so scanners/reviewers/GitHub push protection can't see them.
-- **secrets-vault-kit** (this) governs the Doppler vault: how to fetch secrets, when to mint an ST, deployment patterns. The Doppler PT follows the same persistence posture as z-container's `zk-remote.url` — a 0600 file in `/home/user_skills/zk-doppler.env`, NOT in the project's `.env`.
+- **secrets-vault-kit** (this) governs the Doppler vault: how to fetch secrets, when to mint an ST, deployment patterns. The Doppler PT follows the same persistence posture as z-container's `${ZK_PREFIX}-remote.url` — a 0600 file in `/home/user_skills/${ZK_PREFIX}-doppler.env`, NOT in the project's `.env`.
 
-The tension we resolved: an earlier version of this kit followed z-container's "git IS the disk" advice and put the Doppler PT in the committed `.env`. That conflicted with code review (reviewers flag any committed secret as P0) and with GitHub's push protection (which can auto-revoke a `ghp_*` if it's committed). The fix: put the PT in `/home/user_skills/` (same place z-container puts `zk-remote.url`) — outside the project repo, git-invisible by construction, no `.gitignore` dance needed.
+The tension we resolved: an earlier version of this kit followed z-container's "git IS the disk" advice and put the Doppler PT in the committed `.env`. That conflicted with code review (reviewers flag any committed secret as P0) and with GitHub's push protection (which can auto-revoke a `ghp_*` if it's committed). The fix: put the PT in `/home/user_skills/` (same place z-container puts `${ZK_PREFIX}-remote.url`) — outside the project repo, git-invisible by construction, no `.gitignore` dance needed.
 
 ## Validation history (8 rounds)
 

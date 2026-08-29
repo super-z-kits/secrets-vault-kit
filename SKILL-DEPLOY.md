@@ -22,7 +22,7 @@ curl -fsS -X POST -H "Authorization: Bearer $PT" -H "Content-Type: application/j
 # → {"token":{"key":"dp.st.prd.xxxx...","slug":"<UUID>","expires_at":"<ISO>"}}
 ```
 
-Capture `token.key` — that's what you put in the deployment target's secret store. Store it in `/home/user_skills/zk-deploy-tokens.env` (mode 0600) — outside the project repo, so git/scanners/reviewers can't see it (see SKILL.md fact #4 for the full rationale). In a normal server environment, use a `chmod 600` file or secret manager (env vars leak to `/proc/<pid>/environ`).
+Capture `token.key` — that's what you put in the deployment target's secret store. Store it in `/home/user_skills/${ZK_PREFIX}-deploy-tokens.env` (mode 0600) — outside the project repo, so git/scanners/reviewers can't see it (see SKILL.md fact #4 for the full rationale). In a normal server environment, use a `chmod 600` file or secret manager (env vars leak to `/proc/<pid>/environ`).
 
 To revoke later (e.g. user asks to rotate the deploy token):
 
