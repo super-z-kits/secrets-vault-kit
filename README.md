@@ -65,6 +65,15 @@ Where the two kits contradict on technical findings, this kit kept its own verif
 
 MIT. Use freely.
 
+## v2.10.1: SKILL.md fat-cut
+
+Same treatment z-container-kit v5.2.0 got: SKILL.md inventorized line by
+line (V01–V27), history/version narratives and provenance tags killed,
+cross-kit re-teaching compressed to a 12-line pairing header, every recipe
+kept verbatim. 257 → 236 lines, zero information loss (sub-agent audited
+both directions; the smoke-tool exit-code claim corrected to match the
+script's actual empty-config behavior: exit 0 + warning).
+
 ## v2.9.0: multi-track-safe PT storage (atomic + fresher-wins)
 
 z-container-kit v5 established the static rule: `/home/user_skills` is
@@ -78,8 +87,8 @@ them, and v2.9 makes the fact #4 write recipe comply:
 - **fresher-wins** — a paste only overwrites when the stored
   `DOPPLER_PT_STORED_AT` is not newer; a stale PT from an older chat can
   never clobber a fresh rotation a parallel session already wrote;
-- the pairing header now states the static rule and where this file sits in
-  it.
+- the pairing header places this kit inside z-container's static rule
+  (the `${ZK_PREFIX}-doppler.env` write is a sanctioned placement).
 
 Seeds policy (closing UF-1, decided): agents never write a `dp.pt.*` seed
 into any Doppler config — the PT arrives via handover, lives only in this

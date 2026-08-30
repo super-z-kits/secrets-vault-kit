@@ -2,37 +2,18 @@
 
 > Read this at session start if the user pastes a `dp.*` token. Otherwise ignore.
 >
-> **Pair with `z-container-kit`** — both kits live side-by-side in
-> `/home/user_skills/` (per-user storage that survives into new chats); load
-> both at session start, reading the LOCAL copies (repo:
-> https://github.com/super-z-kits/z-container-kit). z-container v5.1 is
-> ZERO-INSTALL and STATIC: its helpers live once per account at
-> `/home/user_skills/z-container-kit/scripts/`, read the project's
-> identity from `/home/z/my-project/.agents/config` (ZK_PREFIX — the .env
-> pattern), and never write `/home/user_skills` during sessions except
-> sanctioned zero-collision placements — this kit's
-> `${ZK_PREFIX}-doppler.env` is one of them (atomic + fresher-wins, fact #4).
-> THIS kit ships its own tool since v2.10:
-> `bash /home/user_skills/secrets-vault-kit/scripts/zdoppler-smoke` (moved
-> from z-container-kit — Doppler is this kit's domain). It resolves the
-> prefix the same way (ZK_PREFIX env > `.agents/config`). Update this kit's
-> installed copy with the copy-then-swap refresh in README.md (never rm -rf
-> a live copy — a parallel session may be reading it). z-container governs
-> persistence (git IS the disk here — `.env` is committed by design, see
-> z-container law 9); this kit governs the Doppler vault. The two compose:
-> the Doppler PT lives in `/home/user_skills/${ZK_PREFIX}-doppler.env` (NOT
-> the committed `.env`); secrets you fetch FROM Doppler for runtime use are
-> not committed (they live in Doppler, your repo only references them by name).
->
-> **Sources — read LOCAL copies first** (audit m1, re-scoped v2.7.4: local
-> before web):
-> - z-container-kit: `/home/user_skills/z-container-kit/SKILL.md`
-> - secrets-vault-kit: `/home/user_skills/secrets-vault-kit/SKILL.md`
-> - deploy guide: `/home/user_skills/secrets-vault-kit/SKILL-DEPLOY.md`
->
-> Web fallback ONLY if a local copy is absent:
-> `https://raw.githubusercontent.com/super-z-kits/<repo>/main/<file>` —
-> fetch the raw URL directly, no inference from GitHub-title shorthand.
+> **Pair with `z-container-kit`** — load both at session start, reading the
+> LOCAL copies (web fallback only if a local copy is absent:
+> `https://raw.githubusercontent.com/super-z-kits/<repo>/main/<file>`).
+> z-container governs persistence and git (`.env` is committed by design —
+> its law 9); this kit governs the Doppler vault: the PT lives in
+> `/home/user_skills/${ZK_PREFIX}-doppler.env` (a sanctioned user_skills
+> write — fact #4), never in the committed `.env`. ZK_PREFIX resolves like
+> z-container's helpers (`ZK_PREFIX` env > `$PROJ/.agents/config`; each
+> bash toolcall is a fresh subshell). This kit's tool: `bash
+> /home/user_skills/secrets-vault-kit/scripts/zdoppler-smoke`; update its
+> installed copy via the README copy-then-swap (never rm -rf a live copy —
+> a parallel session may be reading it).
 
 ## Handover (what the user pastes)
 
@@ -43,41 +24,39 @@
 - config: dev | stg | prd
 ```
 
-**Convention (audit F2):** the `config:` field in the handover MUST be the config that actually contains the seed secrets. If `dev` is empty in your Doppler project but `prd` has the seeds, the handover should say `config: prd` (or you should mirror the seeds into `dev` so the handover works as written). Empty-config false-positives are the most common onboarding failure.
+**The `config:` field MUST name the config that actually contains the seed
+secrets.** If `dev` is empty but `prd` has the seeds, the handover should
+say `config: prd` (or mirror the seeds into `dev`). Empty-config
+false-positives are the most common onboarding failure.
 
-First-time setup (if no Doppler project yet) — create project + 3 configs (dev/stg/prd), write the seeds into the config you'll reference in the handover, return the handover block above for the user to save.
+First-time setup (if no Doppler project yet) — create project + 3 configs
+(dev/stg/prd), write the seeds into the config you'll reference in the
+handover, return the handover block above for the user to save.
 
-**Config naming (audit F9, OF-11):** the standard Doppler convention is `dev | stg | prd`. Some kits add `dev_personal` — a per-user sandbox inside a shared project so multiple users can test without clobbering each other's seeds. If your project has `dev_personal`:
-- If it's intentionally a per-user sandbox (mirrors `dev`'s seeds for testing): document its purpose in the Doppler project description so agents know it's expected.
-- If it's a leftover with no clear owner: delete it via the Doppler dashboard to avoid confusing agents who encounter an undocumented config.
-- Agents: if you encounter `dev_personal` and it's not documented, flag it to the user — don't assume it's safe to use as your config.
+**`dev_personal` configs:** the standard convention is `dev | stg | prd`;
+`dev_personal` is a per-user sandbox inside a shared project. If you
+encounter one that isn't documented as intentional, flag it to the user —
+don't assume it's safe to use as your config. Intentional ones are
+documented in the project description; an ownerless leftover → recommend
+deleting it (Doppler dashboard).
 
 ## The 5 facts that aren't in training data
 
-1. **Fetch all secrets**: `GET https://api.doppler.com/v3/configs/config/secrets?project=<P>&config=<C>` with `Authorization: Bearer <PT>`. Secret value is at `.secrets.<NAME>.computed` (plain string).
-
-   *(Audit F7: the response also includes `.raw` for each secret, but `.raw` is empty/null on the list endpoint for Doppler's auto-injected `DOPPLER_CONFIG`/`DOPPLER_ENVIRONMENT`/`DOPPLER_PROJECT` metadata keys. Always use `.computed` — never `.raw`.)*
+1. **Fetch all secrets**: `GET https://api.doppler.com/v3/configs/config/secrets?project=<P>&config=<C>` with `Authorization: Bearer <PT>`. Secret value is at `.secrets.<NAME>.computed` (plain string). Always use `.computed` — `.raw` is empty/null on the list endpoint for Doppler's auto-injected `DOPPLER_*` metadata keys.
 
 2. **Use the PT directly for the chat session.** It's already in chat (burned). Don't mint a Service Token as a "least-privilege" reflex — the agent sees the PT anyway, so the ST doesn't reduce blast radius. Minting ceremony is theater for the chat session.
 
 3. **Don't put `dp.pt.*` in persistent deployment targets** (GitHub repo secrets, Cloudflare Worker secrets, Vercel/Netlify env vars) — anyone with `repo` scope on GitHub can read a stored secret, and from a `dp.pt.*` they can mint write-capable Service Tokens. Mint a `dp.st.*` Service Token instead (scoped to one project+config, read-only by default, TTL-bounded via `expire_at` Unix ts which auto-revokes + auto-deletes the slug at expiry). See `SKILL-DEPLOY.md` for the deployment flow.
 
-4. **Store the PT in `/home/user_skills/${ZK_PREFIX}-doppler.env` (mode 0600)** — NOT in the project's `.env` and NOT in a shell var. Reasons: (a) `/home/user_skills/` is OUTSIDE the project repo, so git/trufflehog/gitleaks/GitHub push protection can't see it — code reviewers won't flag it and GitHub won't auto-revoke a `ghp_*` if it leaks there; (b) it survives recycles + force-kills (PolarFS) and probably survives into a new chat (per-user namespace, see z-container persistence map); (c) mode 0600 means other processes on the box can't read it; (d) same posture as z-container's account default (`zk-default.env`, 0600) — a conscious credential placement in per-user storage, never inside the repo. Canonical file contents:
+4. **Store the PT in `/home/user_skills/${ZK_PREFIX}-doppler.env` (mode 0600)** — NOT in the project's `.env` and NOT in a shell var. It sits outside the repo (invisible to git/trufflehog/gitleaks and GitHub push protection — no reviewer flags, no auto-revoke), on PolarFS (survives recycles + force-kills, probably new chats), at 0600. Canonical contents:
    ```
    DOPPLER_PT=dp.pt.xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
    DOPPLER_PROJECT=example-project
    DOPPLER_CONFIG=dev
+   DOPPLER_PT_STORED_AT=2026-08-30T00:00:00Z
    ```
 
-   **Writing the file (audit F4, v2.9 multi-track safe):** the Super Z `Write`
-   tool can only write under `/home/z/*` — it will refuse `/home/user_skills/...`.
-   Use bash. `/home/user_skills` is shared across ALL concurrent chats and has
-   no git (no merge, no conflict handling — z-container v5's static rule makes
-   it read-only for sessions except sanctioned credential placements like
-   this one), so the write must be (a) atomic — same-dir tmp + `mv`, never a
-   bare redirect — and (b) fresher-wins — an older paste never clobbers a
-   newer stored rotation from a parallel session. With the handover values in
-   shell vars (`DOPPLER_PT`, `DOPPLER_PROJECT`, `DOPPLER_CONFIG`):
+   **Writing the file:** the Super Z `Write` tool refuses `/home/user_skills/...` — use bash. `/home/user_skills` is shared across concurrent chats with no git (z-container's static rule), so the write must be atomic (same-dir tmp + `mv`) and fresher-wins (an older paste never clobbers a newer stored rotation from a parallel session). With the handover values in shell vars:
    ```bash
    F=/home/user_skills/${ZK_PREFIX}-doppler.env
    : "${DOPPLER_PT:?set DOPPLER_PT from the handover paste}" \
@@ -94,21 +73,30 @@ First-time setup (if no Doppler project yet) — create project + 3 configs (dev
    fi
    ```
    (No heredoc on purpose — an indented `EOF` terminator breaks a verbatim
-   copy-paste. printf is indent-immune. The bash tool redactor is
-   PREFIX-SELECTIVE — see fact #5; never echo real token values.)
+   copy-paste. printf is indent-immune. Never echo real token values.)
 
-   **PT staleness metadata (audit m9):** since the kit policy is "user rotates the PT after every chat," the stored PT is always stale-by-policy. Without a timestamp, the agent has no way to know how stale. The canonical file format includes `DOPPLER_PT_STORED_AT=<iso8601>` (UTC, set when the file is written). **Fresher paste wins**: a new paste overwrites the file ONLY when the stored timestamp is not newer — a parallel session's fresher rotation is never clobbered by an older one. `zdoppler-smoke` warns if the stored PT is older than 7 days.
+   The stored PT is stale-by-policy (the user rotates after every chat);
+   `DOPPLER_PT_STORED_AT` is how you know how stale, and `zdoppler-smoke`
+   warns if it's older than 7 days.
 
-   **PT format validation (audit F1):** before the first Doppler API call, sanity-check the PT format:
+   **PT format validation** — before the first Doppler API call (a trailing
+   `)` or extra whitespace from chat-client paste is the most common cause):
    ```bash
    printf '%s' "$DOPPLER_PT" | grep -qE '^dp\.(pt|st)\.[A-Za-z0-9]{32,80}$' \
      || { echo "PT looks malformed (length ${#DOPPLER_PT}) — paste artifact?"; exit 1; }
    ```
-   A trailing `)` or extra whitespace from chat-client paste is the most common cause. Don't waste an API call on a malformed PT.
 
-   Source at the start of each Bash call that needs it: `set -a; source /home/user_skills/${ZK_PREFIX}-doppler.env; set +a` (each Bash toolcall is a fresh subshell — don't assume vars persist across calls; safest pattern is to source + fetch + use inside a single call, as fact #5 shows). Secrets you FETCH from Doppler for runtime use (GH_PAT, STRIPE_KEY, etc.) go in shell vars only — they're already in Doppler permanently, your repo references them by name, never writes their values to a tracked file. POST `/configs/config/secrets` echoes raw values back at `.secrets.<K>.raw` in the response body — pipe straight to `/dev/null` or capture in a shell var only, don't write the response to a file you'll commit.
+   Source the file at the start of each bash call that needs it: `set -a;
+   source /home/user_skills/${ZK_PREFIX}-doppler.env; set +a`. Secrets you
+   FETCH from Doppler for runtime use (GH_PAT, STRIPE_KEY, …) go in shell
+   vars only — they're already in Doppler permanently; your repo references
+   them by name, never writes their values to a tracked file. POST
+   `/configs/config/secrets` echoes raw values back at `.secrets.<K>.raw` —
+   pipe straight to `/dev/null` or capture in a shell var only.
 
-   **Staging pattern for multi-call flows (audit M7):** the "shell vars only" rule conflicts with the fresh-subshell-per-toolcall reality when a verification flow needs to span multiple bash calls (e.g. fetch Doppler secrets, then verify GH, then verify CF, then verify Supabase). For these multi-call flows, stage the fetched secrets as a 0600 JSON file under `/tmp/my-project/` (per-chat, untracked, outside the git tree):
+   **Staging pattern for multi-call flows** (verification flows that span
+   multiple bash calls): stage the fetched secrets as a 0600 JSON file under
+   `/tmp/my-project/` (per-chat, untracked, outside the git tree):
    ```bash
    set -a; source /home/user_skills/${ZK_PREFIX}-doppler.env; set +a
    curl -sS -H "Authorization: Bearer $DOPPLER_PT" \
@@ -116,70 +104,66 @@ First-time setup (if no Doppler project yet) — create project + 3 configs (dev
      | jq '.secrets | to_entries | map(select(.key | startswith("DOPPLER_") | not)) | map({(.key): .value.computed}) | add' \
      > /tmp/my-project/doppler-secrets.json
    chmod 0600 /tmp/my-project/doppler-secrets.json
-   # subsequent calls read from this file:
    GH_PAT=$(jq -r .GH_PAT /tmp/my-project/doppler-secrets.json)
-   # ... use $GH_PAT ...
-   # at session end:
-   rm -f /tmp/my-project/doppler-secrets.json
+   # ... use $GH_PAT ... ; at session end: rm -f /tmp/my-project/doppler-secrets.json
    ```
-   Single-secret one-shots still use the pipe-through pattern (fact #5) — no need to stage. (The old `doppler_fetch.py` automation was deleted in z-container v5.1's script audit — this curl recipe is the canonical staging pattern.)
+   Single-secret one-shots still use the pipe-through pattern (fact #5).
 
-5. **The bash tool redactor is PREFIX-SELECTIVE, not comprehensive (OF-1 critical fix).** Observed 2026-08-28: only `ghp_*` is masked (`[REDACTED:github_token]`); `dp.pt.*`, `dp.st.*`, `cfat_*`, and `sbp_*` print in CLEARTEXT in all output (echo, printf, inline in sentences). This may change with platform builds — don't assume. **Verify the current redaction set at session start** with fake tokens (zero risk). Use realistic-length fakes (R10 fix: too-short fakes like `ghp_aaaa` don't trigger the redactor and produce false negatives):
+5. **The bash tool redactor is PREFIX-SELECTIVE, not comprehensive.** Observed 2026-08-28: only `ghp_*` is masked (`[REDACTED:github_token]`); `dp.pt.*`, `dp.st.*`, `cfat_*`, and `sbp_*` print in CLEARTEXT in all output. This may change with platform builds — verify at session start with realistic-length fakes (too-short fakes like `ghp_aaaa` don't trigger the redactor):
    ```bash
-   # Redactor self-test (5 fake tokens at realistic lengths, zero risk)
-   # Lengths: ghp_=40, dp.pt/dp.st=~49, cfat_=53, sbp_=44
-   for t in \
-     "ghp_$(printf 'a%.0s' {1..36})" \
-     "dp.pt.$(printf 'a%.0s' {1..43})" \
-     "dp.st.$(printf 'a%.0s' {1..43})" \
-     "cfat_$(printf 'a%.0s' {1..48})" \
-     "sbp_$(printf 'a%.0s' {1..40})"; do
-     printf '  %-55s -> ' "$t"; echo "$t"
-   done
-   # If a line shows the token instead of [REDACTED:...], that prefix is NOT redacted.
-   # Observed: only ghp_* -> [REDACTED:github_token]; others print cleartext.
+   for t in "ghp_$(printf 'a%.0s' {1..36})" "dp.pt.$(printf 'a%.0s' {1..43})" \
+            "dp.st.$(printf 'a%.0s' {1..43})" "cfat_$(printf 'a%.0s' {1..48})" \
+            "sbp_$(printf 'a%.0s' {1..40})"; do
+     printf '%s\n' "$t"; done   # any line printing cleartext = that prefix is NOT redacted
    ```
-   Given the redactor is unreliable: **never `cat`/`head`/`echo` a real secret value**. Capture to a shell var and pipe straight to the next call: `GH_PAT=$(curl ... | jq -r '.secrets.GH_PAT.computed')` then `curl -H "Authorization: Bearer $GH_PAT" ...`. Verify by length only: `echo "${#GH_PAT}"` (length is safe; the value is not).
+   Given the redactor is unreliable: **never `cat`/`head`/`echo` a real secret value**. Capture to a shell var and pipe straight to the next call: `GH_PAT=$(curl ... | jq -r '.secrets.GH_PAT.computed')` then `curl -H "Authorization: Bearer $GH_PAT" ...`. Verify by length only: `echo "${#GH_PAT}"`.
 
 🚨 **Don't revoke the user's Personal Token.** It's their master key — they rotate it themselves via the Doppler dashboard after the session. If you accidentally revoke it (e.g. via `DELETE /v3/workplace/personal_tokens/...`), the user loses access to their vault and you've made a mess.
 
-## Smoke test (audit F8)
+## Smoke test
 
-After writing `/home/user_skills/${ZK_PREFIX}-doppler.env`, run this kit's one-shot smoke test (v2.10: the tool moved here from z-container-kit — Doppler is this kit's domain):
+After writing `/home/user_skills/${ZK_PREFIX}-doppler.env`:
 
 ```
 bash /home/user_skills/secrets-vault-kit/scripts/zdoppler-smoke
 ```
 
-It: (a) validates the PT format (audit F1), (b) fetches the secrets, (c) prints `name: computed_len` for each non-DOPPLER_ key, (d) exits 0 if healthy, non-zero if the PT is malformed or the config is empty. Drops the agent's verification step from ~15 lines of boilerplate to a single command. It resolves the prefix exactly like z-container's helpers (ZK_PREFIX env > `$PROJ/.agents/config`) and accepts `--env-file` / `--project` / `--config` overrides. If the script is unavailable (this kit's installed copy predates v2.10), the verification boilerplate is:
+It validates the PT format, fetches the secrets, prints `name: computed_len`
+for each non-DOPPLER_ key, and exits 0 if healthy (non-zero if the PT is
+malformed or the fetch fails; an empty config exits 0 with a ⚠️ warning) —
+drops ~15 lines of verification
+boilerplate to one command. It resolves the prefix like z-container's
+helpers and accepts `--env-file` / `--project` / `--config` overrides. If
+the script is unavailable, the verification boilerplate:
 
 ```bash
 set -a; source /home/user_skills/${ZK_PREFIX}-doppler.env; set +a
-# Validate format (audit F1)
 printf '%s' "$DOPPLER_PT" | grep -qE '^dp\.(pt|st)\.[A-Za-z0-9]{32,80}$' \
   || { echo "PT malformed (len ${#DOPPLER_PT})"; exit 1; }
-# Fetch + list (names + lengths only — never print values)
 curl -sS -H "Authorization: Bearer $DOPPLER_PT" \
   "https://api.doppler.com/v3/configs/config/secrets?project=$DOPPLER_PROJECT&config=$DOPPLER_CONFIG" \
   | jq -r '.secrets | to_entries | map(select(.key | startswith("DOPPLER_") | not)) | .[] | "\(.key)  (computed len: \(.value.computed | length // 0))"'
 ```
 
-## Vault-sourced GitHub bootstrap (OF-4 — Path C)
+## Vault-sourced GitHub bootstrap (Path C)
 
-In some sessions, the user does NOT paste a GitHub PAT in the handover — instead, the GH_PAT lives inside the Doppler vault (e.g. `agent-bootstrap` project). This is the expected flow for kit-iteration work. On a true cold start (no origin wired, no account default — note z-container v5.1 deleted the `${ZK_PREFIX}-remote.url` credential files; the remote now travels inside the repo, with `zk-default.env` as the opt-in single-project shortcut) and no PAT was pasted:
+If the user does NOT paste a GitHub PAT — the GH_PAT lives inside the
+Doppler vault (e.g. `agent-bootstrap` project; that name is the hint this
+is the intended flow) — on a true cold start (no origin wired, no account
+default, no PAT pasted):
 
 ```bash
-# 1. Write the Doppler env file (per fact #4 self-bootstrap)
-# 2. Run zdoppler-smoke to confirm vault is reachable + GH_PAT is present
+# 1. Write the Doppler env file (per fact #4)
+# 2. Confirm the vault is reachable + GH_PAT is present
 bash /home/user_skills/secrets-vault-kit/scripts/zdoppler-smoke
-# 3. Stage the vault secrets (M7 pattern — needed because bash subshells don't persist vars)
+# 3. Stage the vault secrets (staging pattern above)
 set -a; source /home/user_skills/${ZK_PREFIX}-doppler.env; set +a
 curl -sS -H "Authorization: Bearer $DOPPLER_PT" \
   "https://api.doppler.com/v3/configs/config/secrets?project=$DOPPLER_PROJECT&config=$DOPPLER_CONFIG" \
   | jq '.secrets | to_entries | map(select(.key | startswith("DOPPLER_") | not)) | map({(.key): .value.computed}) | add' \
   > /tmp/my-project/doppler-secrets.json
 chmod 0600 /tmp/my-project/doppler-secrets.json
-# 4. Extract GH_PAT and wire the workspace remote (PAT never echoed — see fact #5)
+# 4. Extract GH_PAT and wire the remote (PAT never echoed — fact #5)
 GH_PAT=$(jq -r .GH_PAT /tmp/my-project/doppler-secrets.json)
 git -C /home/z/my-project remote add origin "https://${GH_PAT}@github.com/<user>/<repo>.git"
 git -C /home/z/my-project fetch origin
@@ -190,57 +174,53 @@ bash /home/user_skills/z-container-kit/scripts/zsave "fresh-chat vault-sourced b
 rm -f /tmp/my-project/doppler-secrets.json   # cleanup staged secrets
 ```
 
-This is the canonical "Path C" — vault-sourced, no user-pasted PAT, no surviving remote. The Doppler project name `agent-bootstrap` is the hint that this is the intended flow.
+## Per-provider verification recipes
 
-## Per-provider verification recipes (audit F3)
-
-When you fetch seed credentials from Doppler (e.g. `GH_PAT`, `CF_ACCOUNT_API_KEY`, `SUPABASE_TOKEN`) and want to verify they work, use the RIGHT verification endpoint per provider. The "obvious" /docs endpoint sometimes lies:
+When you fetch seed credentials from Doppler and want to verify they work,
+use the RIGHT endpoint per provider — the "obvious" /docs endpoint
+sometimes lies:
 
 **GitHub**: `GET /user` with `Authorization: Bearer <GH_PAT>` → 200 + `{login, ...}` means valid. `GET /repos/<owner>/<repo>` → 200 means accessible; 404 means not visible (token lacks scope OR repo doesn't exist; can't distinguish without trying another repo).
 
-**Cloudflare (audit F3 — the trap)**: `cfat_*`-prefixed API tokens look like they should verify with `POST /user/tokens/verify` — and they DO if the token has User scope. But narrowly-scoped account-only tokens return 401 "Invalid API Token" from `/verify` even though they're perfectly valid. **Use `GET /accounts` instead**: 200 + non-empty `result` = token valid. `/user/tokens/verify` is only authoritative for tokens that carry the "User API Tokens: Read" scope.
+**Cloudflare**: `cfat_*`-prefixed API tokens look like they should verify with `POST /user/tokens/verify` — and they DO if the token has User scope. But narrowly-scoped account-only tokens return 401 "Invalid API Token" from `/verify` even though they're perfectly valid. **Use `GET /accounts` instead**: 200 + non-empty `result` = token valid. `/user/tokens/verify` is only authoritative for tokens that carry the "User API Tokens: Read" scope.
 
-**Supabase (audit M3 — the WAF trap)**: `api.supabase.com` is fronted by Cloudflare WAF. `python-urllib`'s default UA (`Python-urllib/3.x`) → HTTP 403 with EMPTY body (or `error code: 1010` on some endpoints) — reads exactly like an auth failure. **Always send a custom `User-Agent`** (e.g. `User-Agent: ${ZK_PREFIX}-verify`). With curl this is automatic (curl's default UA passes); with urllib/requests/axios, set it explicitly. Once you have 200: `GET /v1/projects` → 200 + array (possibly empty `[]` = token valid, account has no projects — NOT an error). `GET /v1/organizations` → 200 + array of orgs the token can see.
+**Supabase**: `api.supabase.com` is fronted by a Cloudflare WAF. `python-urllib`'s default UA (`Python-urllib/3.x`) → HTTP 403 with EMPTY body (or `error code: 1010`) — reads exactly like an auth failure. **Always send a custom `User-Agent`** (e.g. `User-Agent: ${ZK_PREFIX}-verify`). With curl this is automatic; with urllib/requests/axios, set it explicitly. Once you have 200: `GET /v1/projects` → 200 + array (possibly empty `[]` = token valid, account has no projects — NOT an error). `GET /v1/organizations` → 200 + array of orgs the token can see.
 
 ## Situational specifics (special-case operations)
 
 **Reading one secret by name** (instead of fetching all): `GET /v3/configs/config/secret?name=X` (singular + query param). NOT `/secrets/{NAME}` — that 404s. Value at `.value.computed`.
 
-**Writing a secret** (only with the user's explicit ask): `POST /v3/configs/config/secrets` with body `{"project":"X","config":"Y","secrets":{"KEY":"value"}}` (flat string values, not nested — nested returns 400 "must be a string"). POST echoes raw values back at `.secrets.<K>.raw` — pipe to `/dev/null`, don't capture to a committable file.
+**Writing a secret** (only with the user's explicit ask): `POST /v3/configs/config/secrets` with body `{"project":"X","config":"Y","secrets":{"KEY":"value"}}` (flat string values, not nested — nested returns 400 "must be a string"). POST echoes raw values back at `.secrets.<K>.raw` — pipe to `/dev/null`.
 
-**Mirroring seeds across configs (audit F2 fix)**: if the user's handover says `config: dev` but the seeds are in `prd`, the cleanest fix is to mirror them. Fetch from `prd`, POST to `dev`:
+**Mirroring seeds across configs**: if the handover says `config: dev` but the seeds are in `prd`, fetch from `prd`, POST to `dev`:
 ```bash
 set -a; source /home/user_skills/${ZK_PREFIX}-doppler.env; set +a
 SEEDS=$(curl -sS -H "Authorization: Bearer $DOPPLER_PT" \
   "https://api.doppler.com/v3/configs/config/secrets?project=$DOPPLER_PROJECT&config=prd")
-# Build a flat-string body from prd's non-DOPPLER_ secrets
 BODY=$(printf '%s' "$SEEDS" | jq -c --arg p "$DOPPLER_PROJECT" '{project:$p, config:"dev",
   secrets: (.secrets | to_entries | map(select(.key | startswith("DOPPLER_") | not))
             | map({(.key): .value.computed}) | add)}')
-# POST to dev, discard the response (it echoes raw values)
 curl -sS -o /dev/null -X POST -H "Authorization: Bearer $DOPPLER_PT" \
   -H "Content-Type: application/json" -d "$BODY" \
   "https://api.doppler.com/v3/configs/config/secrets"
 ```
 
-**Listing configs in a project (audit M4 — the 400 quirk)**: use `GET /v3/configs?project=<P>` (slug-as-query-param). Do NOT use `GET /v3/projects/project/<P>` (slug-in-path) — that returns 400 with `{"messages":["You must specify a project"],"success":false}` even though the project IS specified (PTs, observed 2026-08). The configs response shape keys on `name`/`slug`(UUID)/`root`/`locked`/`environment` — NOT `id` (parsing for `id` raises KeyError).
+**Listing configs in a project**: use `GET /v3/configs?project=<P>` (slug-as-query-param). Do NOT use `GET /v3/projects/project/<P>` (slug-in-path) — that returns 400 with `{"messages":["You must specify a project"],"success":false}` even though the project IS specified. The configs response keys on `name`/`slug`(UUID)/`root`/`locked`/`environment` — NOT `id`.
 
-**Workplace / PT identity (audit M4)**: `GET /v3/workplace` with the PT Bearer returns the workplace name/slug/id — useful as a PT-validity check that doesn't require knowing the project name.
+**Workplace / PT identity**: `GET /v3/workplace` with the PT Bearer returns the workplace name/slug/id — a PT-validity check that doesn't require knowing the project name.
 
 **Deleting a secret**: `DELETE /v3/configs/config/secret?project=X&config=Y&name=K` (no body, HTTP 204). Reading a deleted secret returns 200 + null `value` fields, not 404.
 
 ## When you need to read SKILL-DEPLOY.md
 
-If the task involves deploying to a persistent target (GitHub Actions workflow, Cloudflare Worker, Supabase Edge Function, Vercel/Netlify) and wiring secrets into it — read [`SKILL-DEPLOY.md`](./SKILL-DEPLOY.md) in this repo. It covers:
-- Minting a `dp.st.*` Service Token for the deployment target (the one legitimate ST use case)
-- GH Actions pull-at-runtime pattern (`doppler run` in the workflow)
-- Cloudflare Workers DIY pull (Doppler has no auto-sync to Workers — only Pages)
-- Supabase one-click auto-sync OR manual Management API
-- Rotation mechanics per platform (chain-reaction resolved via seed/worker split)
+If the task involves deploying to a persistent target (GitHub Actions
+workflow, Cloudflare Worker, Supabase Edge Function, Vercel/Netlify) and
+wiring secrets into it — read `SKILL-DEPLOY.md` (minting the deployment
+target's `dp.st.*`, per-platform pull patterns, rotation mechanics). Don't
+read it for: reading secrets to use in chat, one-shot API calls, or local
+dev work.
 
-Don't read SKILL-DEPLOY.md for: reading secrets to use in chat, fetching a token to call an API directly, one-shot tasks, or local dev work.
-
-## Token fingerprint table (audit m13)
+## Token fingerprint table
 
 When you encounter an unknown token, identify it by prefix + length:
 
@@ -250,7 +230,7 @@ When you encounter an unknown token, identify it by prefix + length:
 | `github_pat_` | GitHub PAT (fine-grained) | 50-90 | `Authorization: Bearer <token>` | replaces `ghp_`; per-repo scopeable |
 | `dp.pt.` | Doppler Personal Token | ~49 | `Authorization: Bearer <token>` | user master key; mint STs from this |
 | `dp.st.` | Doppler Service Token | ~49 | `Authorization: Bearer <token>` | scoped to one project+config; TTL-bounded via `expire_at` |
-| `cfat_` | Cloudflare API Token | 40-100 | `Authorization: Bearer <token>` | per-token scope; verify via `GET /accounts` (not `/user/tokens/verify` — see audit F3) |
-| `sbp_` | Supabase Access Token | ~44 | `Authorization: Bearer <token>` | from supabase.com/dashboard/account/tokens; works on `/v1/projects`, `/v1/organizations` (send custom UA — see audit M3) |
+| `cfat_` | Cloudflare API Token | 40-100 | `Authorization: Bearer <token>` | per-token scope; verify via `GET /accounts` (not `/user/tokens/verify`) |
+| `sbp_` | Supabase Access Token | ~44 | `Authorization: Bearer <token>` | from supabase.com/dashboard/account/tokens; send custom UA |
 
-All lengths are observed 2026-08; individual tokens may vary by a few chars. **The bash display redactor is PREFIX-SELECTIVE (see fact #5)**: only `ghp_*` is masked (`[REDACTED:github_token]`); `dp.*`/`cfat_*`/`sbp_*` print in cleartext. Never pipe a real token through echo/cat/printf — capture to a shell var and pipe directly to the next curl. Verify by length, not by sight.
+All lengths observed 2026-08; individual tokens may vary by a few chars. The bash display redactor is PREFIX-SELECTIVE (see fact #5) — never pipe a real token through echo/cat/printf; verify by length, not by sight.
