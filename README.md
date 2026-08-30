@@ -65,6 +65,14 @@ Where the two kits contradict on technical findings, this kit kept its own verif
 
 MIT. Use freely.
 
+## v2.10.2: knowledge-first alignment
+
+Path C (vault-sourced bootstrap) tail now carries a tool-neutral
+annotation (hand-written one-line config + z-container's minimal save path)
+and a ZK_PREFIX-at-step-1 note, so a no-kit-tools agent can run the whole
+flow. Confirmed knowledge-first by line-by-line sub-agent audit (the 5
+facts and the smoke fallback were already tool-neutral).
+
 ## v2.10.1: SKILL.md fat-cut
 
 Same treatment z-container-kit v5.2.0 got: SKILL.md inventorized line by

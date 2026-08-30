@@ -153,7 +153,8 @@ is the intended flow) — on a true cold start (no origin wired, no account
 default, no PAT pasted):
 
 ```bash
-# 1. Write the Doppler env file (per fact #4)
+# 1. Write the Doppler env file (per fact #4 — needs ZK_PREFIX: export it
+#    or source .agents/config first)
 # 2. Confirm the vault is reachable + GH_PAT is present
 bash /home/user_skills/secrets-vault-kit/scripts/zdoppler-smoke
 # 3. Stage the vault secrets (staging pattern above)
@@ -171,6 +172,9 @@ git -C /home/z/my-project log origin/main --oneline -5   # SANITY CHECK before r
 git -C /home/z/my-project reset --hard origin/main
 bash /home/user_skills/z-container-kit/scripts/zk-init <name>
 bash /home/user_skills/z-container-kit/scripts/zsave "fresh-chat vault-sourced bootstrap checkpoint"
+# no kit? equivalently: hand-write the one-line config (mkdir -p .agents &&
+# printf 'ZK_PREFIX=<name>\n' > .agents/config) and save via z-container's
+# minimal two-command path
 rm -f /tmp/my-project/doppler-secrets.json   # cleanup staged secrets
 ```
 
