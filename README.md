@@ -65,6 +65,16 @@ Where the two kits contradict on technical findings, this kit kept its own verif
 
 MIT. Use freely.
 
+## v2.11.0: Path C identity guard + vault orphan detection (round 16)
+
+Path C's trailing `zk-init <name>` now runs ONLY when `.agents/config` did
+not come back with the `reset --hard` — a recovery reuses the repo's own
+committed name (previously the unconditional init could silently clobber a
+recovered identity). `zdoppler-smoke` gained same-vault orphan detection:
+other `*-doppler.env` files in `/home/user_skills/` naming the same
+DOPPLER_PROJECT are flagged as stale duplicates (fresher-wins protects only
+within one file path; the vault is account-scoped, the filename is not).
+
 ## v2.10.2: knowledge-first alignment
 
 Path C (vault-sourced bootstrap) tail now carries a tool-neutral

@@ -1,17 +1,18 @@
-# secrets-vault-skill
+# secrets-vault-kit
 
 > Read this at session start if the user pastes a `dp.*` token. Otherwise ignore.
 >
 > **Pair with `z-container-kit`** — load both at session start, reading the
 > LOCAL copies (web fallback only if a local copy is absent:
-> `https://raw.githubusercontent.com/super-z-kits/<repo>/main/<file>`).
+> `https://raw.githubusercontent.com/super-z-kits/<repo>/main/<file>`,
+> `<repo>` = z-container-kit | secrets-vault-kit).
 > z-container governs persistence and git (`.env` is committed by design —
 > its law 9); this kit governs the Doppler vault: the PT lives in
 > `/home/user_skills/${ZK_PREFIX}-doppler.env` (a sanctioned user_skills
 > write — fact #4), never in the committed `.env`. ZK_PREFIX resolves like
 > z-container's helpers (`ZK_PREFIX` env > `$PROJ/.agents/config`; each
-> bash toolcall is a fresh subshell). This kit's tool: `bash
-> /home/user_skills/secrets-vault-kit/scripts/zdoppler-smoke`; update its
+> bash toolcall is a fresh subshell). This kit's tool:
+> `bash /home/user_skills/secrets-vault-kit/scripts/zdoppler-smoke`; update its
 > installed copy via the README copy-then-swap (never rm -rf a live copy —
 > a parallel session may be reading it).
 
@@ -86,8 +87,8 @@ deleting it (Doppler dashboard).
      || { echo "PT looks malformed (length ${#DOPPLER_PT}) — paste artifact?"; exit 1; }
    ```
 
-   Source the file at the start of each bash call that needs it: `set -a;
-   source /home/user_skills/${ZK_PREFIX}-doppler.env; set +a`. Secrets you
+   Source the file at the start of each bash call that needs it:
+   `set -a; source /home/user_skills/${ZK_PREFIX}-doppler.env; set +a`. Secrets you
    FETCH from Doppler for runtime use (GH_PAT, STRIPE_KEY, …) go in shell
    vars only — they're already in Doppler permanently; your repo references
    them by name, never writes their values to a tracked file. POST
@@ -147,10 +148,10 @@ curl -sS -H "Authorization: Bearer $DOPPLER_PT" \
 
 ## Vault-sourced GitHub bootstrap (Path C)
 
-If the user does NOT paste a GitHub PAT — the GH_PAT lives inside the
-Doppler vault (e.g. `agent-bootstrap` project; that name is the hint this
-is the intended flow) — on a true cold start (no origin wired, no account
-default, no PAT pasted):
+If the user does NOT paste a GitHub PAT, the GH_PAT may live inside the
+Doppler vault (an `agent-bootstrap` project name is the hint this is the
+intended flow). This flow is for a true cold start: no origin wired, no
+account default, no PAT pasted.
 
 ```bash
 # 1. Write the Doppler env file (per fact #4 — needs ZK_PREFIX: export it
@@ -168,8 +169,11 @@ chmod 0600 /tmp/my-project/doppler-secrets.json
 GH_PAT=$(jq -r .GH_PAT /tmp/my-project/doppler-secrets.json)
 git -C /home/z/my-project remote add origin "https://${GH_PAT}@github.com/<user>/<repo>.git"
 git -C /home/z/my-project fetch origin
-git -C /home/z/my-project log origin/main --oneline -5   # SANITY CHECK before reset
+git -C /home/z/my-project log origin/main --oneline -5   # SANITY CHECK before reset (empty remote? skip the reset)
 git -C /home/z/my-project reset --hard origin/main
+# zk-init ONLY if .agents/config did not come back with the reset — a
+# recovery reuses the repo's own committed name (never invent one);
+# recovered name differs? rename the env file to the recovered prefix
 bash /home/user_skills/z-container-kit/scripts/zk-init <name>
 bash /home/user_skills/z-container-kit/scripts/zsave "fresh-chat vault-sourced bootstrap checkpoint"
 # no kit? equivalently: hand-write the one-line config (mkdir -p .agents &&

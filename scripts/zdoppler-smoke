@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # zdoppler-smoke — one-shot verification of the Doppler onboarding (audit F8)
-# (secrets-vault-kit v2.10 — this is THIS kit's tool; Doppler is its domain)
+# (secrets-vault-kit v2.11 — this is THIS kit's tool; Doppler is its domain)
 #
 # Problem: after the user pastes a Doppler handover (PT, project, config)
 # and the agent writes /home/user_skills/${PREFIX}-doppler.env, the agent
@@ -151,6 +151,27 @@ if [ -n "${DOPPLER_PT_STORED_AT:-}" ]; then
 else
   echo "  PT age:     ⚠️ DOPPLER_PT_STORED_AT not set (can't assess staleness)"
   echo "              add 'DOPPLER_PT_STORED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)' to the env file"
+fi
+
+# ---- R16-F4: same-vault orphan detection --------------------------------------
+# The vault (PT+project+config) is ACCOUNT-scoped, but env files are keyed by
+# per-project prefix — other prefixes' files naming the SAME DOPPLER_PROJECT
+# are stale duplicates (fresher-wins protects only within ONE file path; a
+# rotation in this file never reaches them). Read-only scan; never prints
+# token values, only filenames + timestamps.
+OTHERS=""
+for f in "$USK"/*-doppler.env; do
+  [ -f "$f" ] || continue
+  [ "$f" = "$ENV_FILE" ] && continue
+  op="$(sed -n 's/^DOPPLER_PROJECT=//p' "$f" 2>/dev/null | head -1 | tr -d "\"'")"
+  [ "$op" = "$DOPPLER_PROJECT" ] || continue
+  ts="$(sed -n 's/^DOPPLER_PT_STORED_AT=//p' "$f" 2>/dev/null | head -1)"
+  OTHERS="$OTHERS
+    $(basename "$f") (stored ${ts:-unknown})"
+done
+if [ -n "$OTHERS" ]; then
+  echo "  ⚠️ same-vault duplicate env files in $USK (account PT copied under other prefixes):$OTHERS"
+  echo "    fresher-wins protects only THIS file — a rotation here does not update those."
 fi
 
 # ---- Fetch secrets ------------------------------------------------------------
